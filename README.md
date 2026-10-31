@@ -135,6 +135,52 @@ DB_NAME=notesdb  DB_USER=notes  DB_PASSWORD=notes  DB_PORT=5432  SERVER_PORT=808
 
 ---
 
+## Quick start (Windows)
+
+For Windows there is a `arranque-rapido/` folder ("quick start") with two double-click
+batch scripts, so no bash is needed:
+
+| File                 | What it does |
+|----------------------|--------------|
+| `arranque-rapido\levantar_notes.bat` | Brings up the full stack: PostgreSQL container (Docker) -> Spring Boot backend -> Vite frontend. It waits for each service to be actually ready before going to the next step, runs `npm install` on the first run, opens the browser at http://localhost:5173 and prints a summary at the end. |
+| `arranque-rapido\cerrar_notes.bat`   | Shuts everything down: closes the two service windows, frees the ports and runs `docker compose down`. The note data is not lost — it stays in the Docker volume (`notes_pgdata`). |
+
+Two service windows remain open while the app runs (`notes-backend :8090` and
+`notes-frontend :5173`); they show the live logs of each server.
+
+### Ports used by the Windows scripts
+
+On a machine that already runs local PostgreSQL (5432) and an EnterpriseDB/pgAdmin
+Apache server (8080), those ports would collide with the default ones. The batch
+scripts therefore pin safe ports:
+
+| Service                 | Port | Why not the default |
+|-------------------------|------|---------------------------|
+| PostgreSQL (Docker)     | 5433 | 5432 is taken by a native PostgreSQL 18 service |
+| Spring Boot backend     | 8090 | 8080 is taken by the pgAdmin/EnterpriseDB Apache  |
+| Vite frontend           | 5173 | default, no clash |
+
+Equivalent environment variables (same names as `run.sh`):
+
+```
+DB_PORT=5433  SERVER_PORT=8090  DB_URL=jdbc:postgresql://localhost:5433/notesdb
+```
+
+The JVM is started with `JAVA_TOOL_OPTIONS=-Duser.timezone=UTC`, so the JDBC driver
+does not send a `America/Buenos_Aires` TimeZone (rejected by the PostgreSQL 16
+container image). The frontend dev server proxies `/api` to
+`http://localhost:8090` via `VITE_BACKEND_URL`.
+
+### Edge cases handled
+
+- **Container name conflict** — if a `notes-postgres` container already exists from a
+  previous run of another project/folder, the script asks `[S,N]` and, on confirmation,
+  recreates it (the container is removed; its data volume is not touched).
+- **First run** — `npm install` is executed automatically when `node_modules` is missing.
+- **Requirements** — same as the Linux script: Docker Desktop, JDK 21 and Node.js.
+
+---
+
 ## Manual run (without the script)
 
 **1. Database** (any PostgreSQL works; with Docker):
